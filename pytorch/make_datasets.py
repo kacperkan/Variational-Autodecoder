@@ -42,7 +42,9 @@ def generate_mnist(train_ratio: float) -> t.Dict[str, np.ndarray]:
 
 
 def generate_mask(input_data: np.ndarray, probability: float) -> np.ndarray:
-    return np.random.binomial(1, 1 - probability, size=input_data.shape).astype(np.float32)
+    return np.random.binomial(
+        1, 1 - probability, size=input_data.shape
+    ).astype(np.float32)
 
 
 def save_data(
@@ -69,7 +71,7 @@ def save_data(
                 "train_mask": train_mask,
                 "valid_mask": valid_mask,
                 "test_mask": test_mask,
-                "train_y_true": dataset["train_2d"] ,
+                "train_y_true": dataset["train_2d"],
                 "valid_y_true": dataset["valid_2d"],
                 "test_y_true": dataset["test_2d"],
             }
