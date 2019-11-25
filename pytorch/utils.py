@@ -10,18 +10,24 @@ import numpy as np
 import torch
 import h5py
 
+
 def load_config(args):
-    config_file = os.path.join('configs', args['config_folder'], 'config_{}.json'.format(args['config_num']))
+    config_file = os.path.join(
+        "configs",
+        args["config_folder"],
+        "config_{}.json".format(args["config_num"]),
+    )
 
-    config = json.load(open(config_file, 'r'))
+    config = json.load(open(config_file, "r"))
 
-    if 'batch_size' in config:
+    if "batch_size" in config:
         # command-line arg overrides config
-        batch_size = args['batch_size']
+        batch_size = args["batch_size"]
         args.update(config)
-        args['batch_size'] = batch_size
+        args["batch_size"] = batch_size
     else:
         args.update(config)
+
 
 def print_config(args):
     """
@@ -29,36 +35,42 @@ def print_config(args):
     """
     pprint.pprint(args, stream=sys.stderr, indent=2)
 
+
 """
 Loading data
 """
 
+
 def load_data(args):
-    if args['dataset_path']:
-        fname_start = args['dataset_path']
-    elif args['dataset'] == 'artificial':
-        raise ValueError('--dataset_path option must be set for artificial dataset')
+    if args["dataset_path"]:
+        fname_start = args["dataset_path"]
+    elif args["dataset"] == "artificial":
+        raise ValueError(
+            "--dataset_path option must be set for artificial dataset"
+        )
     else:
-        fname_start = os.path.join('data', args['dataset'], args['dataset'])
+        fname_start = os.path.join("data", args["dataset"], args["dataset"])
     # fname_start = args['data_file']
 
     load_fns = {
-            'sfm': load_sfm,
-            'artificial': load_artificial,
-            'mosi': load_mosi,
-            'mosei': load_mosi,
-            'mnist': load_mnist,
-            'fashion_mnist': load_mnist,
+        "sfm": load_sfm,
+        "artificial": load_artificial,
+        "mosi": load_mosi,
+        "mosei": load_mosi,
+        "mnist": load_mnist,
+        "fashion_mnist": load_mnist,
     }
 
-    if args['dataset'] not in load_fns.keys():
+    if args["dataset"] not in load_fns.keys():
         raise NotImplementedError
     else:
-        load_fn = load_fns[args['dataset']]
-        train_data, train_mask, test_data, test_mask, test_true = load_fn(args, fname_start)
+        load_fn = load_fns[args["dataset"]]
+        train_data, train_mask, test_data, test_mask, test_true = load_fn(
+            args, fname_start
+        )
 
     def torchify(arr):
-        return torch.tensor(arr, dtype=torch.float, device=args['device'])
+        return torch.tensor(arr, dtype=torch.float, device=args["device"])
 
     train_data = torchify(train_data)
     train_mask = torchify(train_mask)
@@ -69,37 +81,39 @@ def load_data(args):
 
     return (train_data, train_mask), (test_data, test_mask), test_true
 
+
 def load_artificial(args, fname_start):
     """
     Load synthetic dataset
     """
     # fname_start = args['data_file']
 
-    if args['masked'] is not None:
-        fname = fname_start + '_' + str(args['masked']) + '.h5'
+    if args["masked"] is not None:
+        fname = fname_start + "_" + str(args["masked"]) + ".h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_y'][:]
-            train_mask = f['train_mask'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_y"][:]
+            train_mask = f["train_mask"][:]
 
-            test_data = f['test_y'][:]
-            test_mask = f['test_mask'][:]
-            test_true = f['test_y_true'][:]
+            test_data = f["test_y"][:]
+            test_mask = f["test_mask"][:]
+            test_true = f["test_y_true"][:]
 
     else:
-        fname = fname_start + '.h5'
+        fname = fname_start + ".h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_data'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_data"][:]
             train_mask = np.ones_like(train_data)
 
-            test_data = f['test_data'][:]
+            test_data = f["test_data"][:]
             test_mask = np.ones_like(test_data)
             test_true = test_data
 
     return train_data, train_mask, test_data, test_mask, test_true
+
 
 def load_sfm(args, fname_start):
     """
@@ -107,38 +121,38 @@ def load_sfm(args, fname_start):
     """
     # fname_start = args['data_file']
 
-    if args['masked'] is not None:
-        fname = fname_start + '_' + str(args['masked']) + '.h5'
+    if args["masked"] is not None:
+        fname = fname_start + "_" + str(args["masked"]) + ".h5"
         # fname = os.path.join(fname_start, 'sfm_{}.h5'.format(args['masked']))
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_2d'][:]
-            train_mask = f['train_mask'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_2d"][:]
+            train_mask = f["train_mask"][:]
             train_mask = np.repeat(np.expand_dims(train_mask, -1), 2, axis=-1)
 
-            valid_data = f['valid_2d'][:]
-            valid_mask = f['valid_mask'][:]
+            valid_data = f["valid_2d"][:]
+            valid_mask = f["valid_mask"][:]
             valid_mask = np.repeat(np.expand_dims(valid_mask, -1), 2, axis=-1)
 
-            test_data = f['test_2d'][:]
-            test_mask = f['test_mask'][:]
+            test_data = f["test_2d"][:]
+            test_mask = f["test_mask"][:]
             test_mask = np.repeat(np.expand_dims(test_mask, -1), 2, axis=-1)
             test_true = test_data
 
     else:
-        fname = fname_start + '.h5'
+        fname = fname_start + ".h5"
         # fname = os.path.join(fname_start, 'sfm.h5')
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_2d'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_2d"][:]
             train_mask = np.ones_like(train_data)
 
-            valid_data = f['valid_2d'][:]
+            valid_data = f["valid_2d"][:]
             valid_mask = np.ones_like(valid_data)
 
-            test_data = f['test_2d'][:]
+            test_data = f["test_2d"][:]
             test_mask = np.ones_like(test_data)
             test_true = test_data
 
@@ -153,10 +167,11 @@ def load_sfm(args, fname_start):
     test_mask = test_mask.reshape(test_mask.shape[0], -1)
 
     test_true = test_true.reshape(test_true.shape[0], -1)
-    
+
     print(train_data.shape)
 
     return train_data, train_mask, test_data, test_mask, test_true
+
 
 def load_mnist(args, fname_start):
     """
@@ -164,27 +179,27 @@ def load_mnist(args, fname_start):
     """
     # fname_start = args['data_file']
 
-    if args['masked'] is not None:
+    if args["masked"] is not None:
         fname = f"{fname_start}_{args['masked']}.h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_y'][:]
-            train_mask = f['train_mask'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_y"][:]
+            train_mask = f["train_mask"][:]
 
-            test_data = f['test_y'][:]
-            test_mask = f['test_mask'][:]
-            test_true = f['test_y_true'][:]
+            test_data = f["test_y"][:]
+            test_mask = f["test_mask"][:]
+            test_true = f["test_y_true"][:]
 
     else:
-        fname = fname_start + '.h5'
+        fname = fname_start + ".h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_x'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_x"][:]
             train_mask = np.ones_like(train_data)
 
-            test_data = f['test_x'][:]
+            test_data = f["test_x"][:]
             test_mask = np.ones_like(test_data)
             test_true = test_data
 
@@ -202,35 +217,35 @@ def load_mnist(args, fname_start):
 
     return train_data, train_mask, test_data, test_mask, test_true
 
+
 def load_mosi(args, fname_start):
     """
     Load MOSI/MOSEI data
     """
     # fname_start = args['data_file']
 
-    if args['masked'] is not None:
-        fname = fname_start + '_' + str(args['masked']) + '.h5'
+    if args["masked"] is not None:
+        fname = fname_start + "_" + str(args["masked"]) + ".h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_y'][:]
-            train_mask = f['train_mask'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_y"][:]
+            train_mask = f["train_mask"][:]
 
-            test_data = f['test_y'][:]
-            test_mask = f['test_mask'][:]
-            test_true = f['test_y_true'][:]
+            test_data = f["test_y"][:]
+            test_mask = f["test_mask"][:]
+            test_true = f["test_y_true"][:]
 
     else:
-        fname = fname_start + '.h5'
+        fname = fname_start + ".h5"
         print(fname)
 
-        with h5py.File(fname, 'r') as f:
-            train_data = f['train_data'][:]
+        with h5py.File(fname, "r") as f:
+            train_data = f["train_data"][:]
             train_mask = np.ones_like(train_data)
 
-            test_data = f['test_data'][:]
+            test_data = f["test_data"][:]
             test_mask = np.ones_like(test_data)
             test_true = test_data
 
     return train_data, train_mask, test_data, test_mask, test_true
-
