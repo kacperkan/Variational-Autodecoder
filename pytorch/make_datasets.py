@@ -33,9 +33,9 @@ def generate_mnist(train_ratio: float) -> t.Dict[str, np.ndarray]:
     )
 
     output = {
-        "train_2d": x_train.numpy().astype(np.float32) / 255,
-        "valid_2d": x_valid.numpy().astype(np.float32) / 255,
-        "test_2d": x_test.numpy().astype(np.float32) / 255,
+        "train_2d": x_train.numpy().astype(np.float32),
+        "valid_2d": x_valid.numpy().astype(np.float32),
+        "test_2d": x_test.numpy().astype(np.float32),
     }
 
     return output
