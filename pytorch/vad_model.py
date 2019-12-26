@@ -1,7 +1,6 @@
 import sys
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -90,6 +89,10 @@ class MaskedDecoder(nn.Module):
         )
 
         self.hiddens = nn.ModuleList(self.hiddens)
+        self.eps = nn.Parameter(
+            torch.Tensor(1, self.latent_size), requires_grad=False
+        )
+        nn.init.normal_(self.eps)
 
     def init_latents(self, n_points, device, mode):
         # TODO: return different latent types depending on option
@@ -116,15 +119,11 @@ class MaskedDecoder(nn.Module):
                 requires_grad=True,
                 device=device,
             )
-
-            # return torch.randn(n_points, self.latent_size, dtype=torch.float,
-            #            requires_grad=True, device=device) * stdev
         else:
             raise NotImplementedError
-        # return torch.randn(n_points, self.latent_size, requires_grad=True, device=device)
 
     def forward(self, latents):
-        # x = F.normalize(latents)
+        x = F.normalize(latents)
         x = latents
 
         for layer in self.hiddens:
@@ -151,7 +150,6 @@ class MaskedVAD(MaskedDecoder):
         self.register_parameter("log_var", log_var_param)
         self.std = np.exp(log_var / 2)
         print("std: {}".format(self.std))
-
         self.verbose = False
 
     def set_verbose(self, verb):
@@ -159,10 +157,10 @@ class MaskedVAD(MaskedDecoder):
 
     def forward(self, latents):
         # sample with unit variance
-        # eps = torch.randn_like(latents, device=latents.device)
-        # x = latents + torch.exp(self.log_var / 2) * eps
+        x = latents + torch.exp(self.log_var / 2) * self.eps
+        # x = latents + torch.normal(torch.zeros_like(latents), std=self.std)
 
-        x = latents + torch.normal(torch.zeros_like(latents), std=self.std)
+        # x = latents + self.eps * self.std
 
         # x = torch.randn_like(latents) + latents
 
@@ -181,7 +179,6 @@ class MaskedVAD(MaskedDecoder):
 class MaskedVAD_free(MaskedDecoder):
     def __init__(self, *args):
         super(MaskedVAD_free, self).__init__(*args)
-
         self.verbose = False
 
     def set_verbose(self, verb):
@@ -189,12 +186,9 @@ class MaskedVAD_free(MaskedDecoder):
 
     def forward(self, latents, latent_log_var):
         # sample with unit variance
-        # eps = torch.randn_like(latents, device=latents.device)
-        # x = latents + torch.exp(self.log_var / 2) * eps
+        eps = torch.randn_like(latents, device=latents.device)
+        x = latents + torch.exp(self.log_var / 2) * eps
 
-        x = latents + torch.randn_like(latents) * torch.exp(
-            0.5 * latent_log_var
-        )
 
         if self.verbose:
             print(latents[:10, :10])

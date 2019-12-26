@@ -1,23 +1,22 @@
-import sys
-import math
-import os
 import argparse
-import time
 import itertools
 import json
+import math
+import os
+import sys
+import time
 import warnings
 
 import h5py
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-
+import torch.optim as optim
 from sklearn.decomposition import PCA
 
+from utils import load_config, load_data, print_config
 from vad_model import MaskedDecoder, MaskedVAD, MaskedVAD2, MaskedVAD_free
-from utils import load_config, print_config, load_data
 
 
 def torch_mse_mask(y_true, y_pred, mask):
@@ -139,6 +138,8 @@ def optimize_network(args, model, y, mask, mode, **kwargs):
     # start optimization loop
     start_time = time.time()
     losses = []
+    max_beta = 1
+    min_beta = 1e-5
 
     while True:
         epoch += 1
@@ -147,6 +148,20 @@ def optimize_network(args, model, y, mask, mode, **kwargs):
         cumu_loss = 0
         cumu_total_loss = 0
         cumu_kl_loss = 0
+
+        if epoch >= 0.5 * n_epochs:
+            beta_value = max_beta
+        else:
+            beta_value = round(
+                min(
+                    1,
+                    max_beta
+                    * np.sin((epoch - 1) / (n_epochs * 0.5) * np.pi / 2)
+                    + min_beta,
+                ),
+                2,
+            )
+        print(f"Beta: {beta_value}")
 
         n_batches = n_points // batch_size
         # model.set_verbose(False)
@@ -165,7 +180,7 @@ def optimize_network(args, model, y, mask, mode, **kwargs):
                 pred_y, transform_mat = model(latents[idxes])
             else:
                 pred_y = model(latents[idxes])
-            # model.set_verbose(False)
+            # model.set_verbose(True)
 
             masked_train = y[idxes] * mask[idxes]
 
@@ -185,7 +200,7 @@ def optimize_network(args, model, y, mask, mode, **kwargs):
                         )
                         / batch_size
                     )
-                    total_loss = loss + args["ratio_kl"] * kl_loss
+                    total_loss = loss + beta_value * kl_loss
 
                 elif args["model"] == "vae_free":
                     kl_loss = 0.5 * torch.sum(
@@ -195,7 +210,7 @@ def optimize_network(args, model, y, mask, mode, **kwargs):
                         - latent_log_var[idxes]
                     )
                     kl_loss /= batch_size
-                    total_loss = loss + args["ratio_kl"] * kl_loss
+                    total_loss = loss + beta_value * kl_loss
 
                 else:
                     raise NotImplementedError
